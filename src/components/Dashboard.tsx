@@ -21,16 +21,25 @@ export function Dashboard() {
     isMonitoring, 
     toggleMonitoring 
   } = useIncidentData();
+  
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
   const [activeSection, setActiveSection] = React.useState('overview');
 
-  const criticalIncidents = incidents.filter(i => i.severity === 'critical').length;
-  const highIncidents = incidents.filter(i => i.severity === 'high').length;
-  const activeIncidents = incidents.filter(i => i.status !== 'resolved').length;
-  const onlineSystemsCount = systemStatus.filter(s => s.status === 'online').length;
-  const unacknowledgedAlerts = alerts.filter(a => !a.acknowledged).length;
-  const highConfidenceThreats = threatDetections.filter(t => t.confidence > 80).length;
-  const criticalAnomalies = anomalies.filter(a => a.severity === 'critical').length;
+  // Safe array defaults and calculations
+  const safeIncidents = incidents || [];
+  const safeSystemStatus = systemStatus || [];
+  const safeAlerts = alerts || [];
+  const safeThreatDetections = threatDetections || [];
+  const safeAnomalies = anomalies || [];
+  const safeNetworkTraffic = networkTraffic || [];
+
+  const criticalIncidents = safeIncidents.filter(i => i.severity === 'critical').length;
+  const highIncidents = safeIncidents.filter(i => i.severity === 'high').length;
+  const activeIncidents = safeIncidents.filter(i => i.status !== 'resolved').length;
+  const onlineSystemsCount = safeSystemStatus.filter(s => s.status === 'online').length;
+  const unacknowledgedAlerts = safeAlerts.filter(a => !a.acknowledged).length;
+  const highConfidenceThreats = safeThreatDetections.filter(t => t.confidence > 80).length;
+  const criticalAnomalies = safeAnomalies.filter(a => a.severity === 'critical').length;
 
   const stats = [
     {
@@ -49,14 +58,14 @@ export function Dashboard() {
     },
     {
       title: 'Systems Online',
-      value: `${onlineSystemsCount}/${systemStatus.length}`,
+      value: `${onlineSystemsCount}/${safeSystemStatus.length}`,
       icon: Database,
       color: 'text-green-400',
       bgColor: 'bg-green-500/20'
     },
     {
       title: 'Network Traffic',
-      value: `${networkTraffic.length}`,
+      value: `${safeNetworkTraffic.length}`,
       icon: Network,
       color: 'text-blue-400',
       bgColor: 'bg-blue-500/20'
@@ -66,10 +75,10 @@ export function Dashboard() {
   const sidebarStats = {
     activeThreats: activeIncidents + highConfidenceThreats,
     criticalIncidents: criticalIncidents + criticalAnomalies,
-    networkTraffic: networkTraffic.length,
-    systemsOnline: `${onlineSystemsCount}/${systemStatus.length}`,
-    activeAlerts: alerts.filter(a => !a.acknowledged && !a.isDuplicate).length,
-    recentIncidents: incidents.length
+    networkTraffic: safeNetworkTraffic.length,
+    systemsOnline: `${onlineSystemsCount}/${safeSystemStatus.length}`,
+    activeAlerts: safeAlerts.filter(a => !a.acknowledged && !a.isDuplicate).length,
+    recentIncidents: safeIncidents.length
   };
 
   const getSectionTitle = () => {
@@ -92,13 +101,14 @@ export function Dashboard() {
         return 'Dashboard Overview';
     }
   };
+
   const renderContent = () => {
     switch (activeSection) {
       case 'threats':
         return (
           <div className="space-y-6">
-            <ThreatMap incidents={incidents} />
-            <IncidentList incidents={incidents.filter(i => i.status !== 'resolved')} />
+            <ThreatMap incidents={safeIncidents} />
+            <IncidentList incidents={safeIncidents.filter(i => i.status !== 'resolved')} />
           </div>
         );
       case 'critical':
@@ -121,25 +131,25 @@ export function Dashboard() {
                 </div>
               </div>
             </div>
-            <IncidentList incidents={incidents.filter(i => i.severity === 'critical')} />
+            <IncidentList incidents={safeIncidents.filter(i => i.severity === 'critical')} />
           </div>
         );
       case 'network':
         return (
           <div className="space-y-6">
-            <NetworkMonitor networkTraffic={networkTraffic} />
+            <NetworkMonitor networkTraffic={safeNetworkTraffic} />
             <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
               <h3 className="text-lg font-semibold text-white mb-4">Network Analysis</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-gray-900 rounded-lg p-4">
                   <div className="text-blue-400 text-xl font-bold">
-                    {networkTraffic.filter(t => t.suspicious).length}
+                    {safeNetworkTraffic.filter(t => t.suspicious).length}
                   </div>
                   <div className="text-gray-400 text-sm">Suspicious Connections</div>
                 </div>
                 <div className="bg-gray-900 rounded-lg p-4">
                   <div className="text-green-400 text-xl font-bold">
-                    {Math.round((networkTraffic.reduce((sum, t) => sum + t.bytes, 0) / 1024 / 1024) * 100) / 100}MB
+                    {Math.round((safeNetworkTraffic.reduce((sum, t) => sum + t.bytes, 0) / 1024 / 1024) * 100) / 100}MB
                   </div>
                   <div className="text-gray-400 text-sm">Total Data Volume</div>
                 </div>
@@ -155,31 +165,31 @@ export function Dashboard() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-green-900/30 rounded-lg p-4">
                   <div className="text-green-400 text-xl font-bold">
-                    {systemStatus.filter(s => s.status === 'online').length}
+                    {safeSystemStatus.filter(s => s.status === 'online').length}
                   </div>
                   <div className="text-gray-400 text-sm">Online</div>
                 </div>
                 <div className="bg-yellow-900/30 rounded-lg p-4">
                   <div className="text-yellow-400 text-xl font-bold">
-                    {systemStatus.filter(s => s.status === 'warning').length}
+                    {safeSystemStatus.filter(s => s.status === 'warning').length}
                   </div>
                   <div className="text-gray-400 text-sm">Warning</div>
                 </div>
                 <div className="bg-red-900/30 rounded-lg p-4">
                   <div className="text-red-400 text-xl font-bold">
-                    {systemStatus.filter(s => s.status === 'error').length}
+                    {safeSystemStatus.filter(s => s.status === 'error').length}
                   </div>
                   <div className="text-gray-400 text-sm">Error</div>
                 </div>
                 <div className="bg-gray-700 rounded-lg p-4">
                   <div className="text-gray-400 text-xl font-bold">
-                    {systemStatus.filter(s => s.status === 'offline').length}
+                    {safeSystemStatus.filter(s => s.status === 'offline').length}
                   </div>
                   <div className="text-gray-400 text-sm">Offline</div>
                 </div>
               </div>
             </div>
-            <SystemStatus systems={systemStatus} />
+            <SystemStatus systems={safeSystemStatus} />
           </div>
         );
       case 'alerts':
@@ -190,31 +200,31 @@ export function Dashboard() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-red-900/30 rounded-lg p-4">
                   <div className="text-red-400 text-xl font-bold">
-                    {alerts.filter(a => a.type === 'critical').length}
+                    {safeAlerts.filter(a => a.type === 'critical').length}
                   </div>
                   <div className="text-gray-400 text-sm">Critical</div>
                 </div>
                 <div className="bg-orange-900/30 rounded-lg p-4">
                   <div className="text-orange-400 text-xl font-bold">
-                    {alerts.filter(a => a.type === 'error').length}
+                    {safeAlerts.filter(a => a.type === 'error').length}
                   </div>
                   <div className="text-gray-400 text-sm">Error</div>
                 </div>
                 <div className="bg-yellow-900/30 rounded-lg p-4">
                   <div className="text-yellow-400 text-xl font-bold">
-                    {alerts.filter(a => a.type === 'warning').length}
+                    {safeAlerts.filter(a => a.type === 'warning').length}
                   </div>
                   <div className="text-gray-400 text-sm">Warning</div>
                 </div>
                 <div className="bg-blue-900/30 rounded-lg p-4">
                   <div className="text-blue-400 text-xl font-bold">
-                    {alerts.filter(a => !a.acknowledged).length}
+                    {safeAlerts.filter(a => !a.acknowledged).length}
                   </div>
                   <div className="text-gray-400 text-sm">Unacknowledged</div>
                 </div>
               </div>
             </div>
-            <AlertPanel alerts={alerts} />
+            <AlertPanel alerts={safeAlerts} />
           </div>
         );
       case 'incidents':
@@ -233,23 +243,23 @@ export function Dashboard() {
                 </div>
                 <div className="bg-yellow-900/30 rounded-lg p-4">
                   <div className="text-yellow-400 text-xl font-bold">
-                    {incidents.filter(i => i.severity === 'medium').length}
+                    {safeIncidents.filter(i => i.severity === 'medium').length}
                   </div>
                   <div className="text-gray-400 text-sm">Medium</div>
                 </div>
                 <div className="bg-green-900/30 rounded-lg p-4">
                   <div className="text-green-400 text-xl font-bold">
-                    {incidents.filter(i => i.status === 'resolved').length}
+                    {safeIncidents.filter(i => i.status === 'resolved').length}
                   </div>
                   <div className="text-gray-400 text-sm">Resolved</div>
                 </div>
               </div>
             </div>
-            <IncidentList incidents={incidents} />
+            <IncidentList incidents={safeIncidents} />
           </div>
         );
       case 'detection':
-        return <ThreatDetectionPanel threatDetections={threatDetections} anomalies={anomalies} />;
+        return <ThreatDetectionPanel threatDetections={safeThreatDetections} anomalies={safeAnomalies} />;
       case 'email-alerts':
         return <SystemAlertPanel />;
       default:
@@ -296,18 +306,18 @@ export function Dashboard() {
                     <div className="text-gray-400 text-sm">High Confidence Threats</div>
                   </div>
                   <div className="bg-gray-900 rounded-lg p-4">
-                    <div className="text-purple-400 text-xl font-bold">{anomalies.length}</div>
+                    <div className="text-purple-400 text-xl font-bold">{safeAnomalies.length}</div>
                     <div className="text-gray-400 text-sm">Anomalies Detected</div>
                   </div>
                   <div className="bg-gray-900 rounded-lg p-4">
                     <div className="text-blue-400 text-xl font-bold">
-                      {alerts.filter(a => a.correlationId).length}
+                      {safeAlerts.filter(a => a.correlationId).length}
                     </div>
                     <div className="text-gray-400 text-sm">Correlated Alerts</div>
                   </div>
                   <div className="bg-gray-900 rounded-lg p-4">
                     <div className="text-green-400 text-xl font-bold">
-                      {alerts.filter(a => a.isDuplicate).length}
+                      {safeAlerts.filter(a => a.isDuplicate).length}
                     </div>
                     <div className="text-gray-400 text-sm">Deduplicated</div>
                   </div>
@@ -315,7 +325,7 @@ export function Dashboard() {
               </div>
 
               {/* Global Threat Map */}
-              <ThreatMap incidents={incidents} />
+              <ThreatMap incidents={safeIncidents} />
 
               {/* Navigation Hint */}
               <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 text-center">
