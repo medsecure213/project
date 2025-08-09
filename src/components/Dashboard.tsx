@@ -10,7 +10,12 @@ import { ThreatDetectionPanel } from './ThreatDetectionPanel';
 import { SystemAlertPanel } from './SystemAlertPanel';
 import { useIncidentData } from '../hooks/useIncidentData';
 
-export function Dashboard() {
+interface DashboardProps {
+  user?: { username: string } | null;
+  onLogout?: () => void;
+}
+
+export function Dashboard({ user, onLogout }: DashboardProps) {
   const { 
     incidents, 
     networkTraffic, 
@@ -360,11 +365,19 @@ export function Dashboard() {
               <div>
                 <h1 className="text-2xl font-bold text-white">{getSectionTitle()}</h1>
                 <p className="text-sm text-gray-400">
-                  Security Operations Center
+                  Security Operations Center{user ? ` • Welcome, ${user.username}` : ''}
                 </p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              {user && onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg transition-colors"
+                >
+                  Logout
+                </button>
+              )}
               <div className="flex items-center space-x-2">
                 <div className={`w-3 h-3 rounded-full ${isMonitoring ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
                 <span className="text-sm text-gray-300">
