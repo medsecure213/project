@@ -10,7 +10,8 @@ import {
   ChevronRight,
   BarChart3,
   Brain,
-  Mail
+  Mail,
+  UserPlus
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -97,6 +98,13 @@ export function Sidebar({
       icon: Mail,
       count: null,
       color: 'text-indigo-400'
+    },
+    {
+      id: 'user-management',
+      label: 'User Management',
+      icon: UserPlus,
+      count: null,
+      color: 'text-purple-400'
     }
   ];
 

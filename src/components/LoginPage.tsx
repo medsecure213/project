@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Shield, Eye, EyeOff, Lock, User, AlertTriangle } from 'lucide-react';
+import { authService } from '../services/authService';
+import { LoginCredentials } from '../types/user';
 
 interface LoginPageProps {
-  onLogin: (credentials: { username: string; password: string }) => void;
+  onLogin: (user: any) => void;
 }
 
 export function LoginPage({ onLogin }: LoginPageProps) {
-  const [credentials, setCredentials] = useState({
+  const [credentials, setCredentials] = useState<LoginCredentials>({
     username: '',
     password: ''
   });
@@ -27,11 +29,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     }
 
     try {
-      // Simulate authentication delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      onLogin(credentials);
+      const user = await authService.login(credentials);
+      onLogin(user);
     } catch (err) {
-      setError('Authentication failed. Please check your credentials.');
+      setError(err instanceof Error ? err.message : 'Authentication failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -72,6 +73,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             <p className="text-gray-400 text-sm">
               Secure access for authorized security personnel
             </p>
+            <div className="mt-4 text-xs text-gray-500">
+              <p>Demo credentials:</p>
+              <p>admin/password • manager/password • analyst/password</p>
+            </div>
           </div>
 
           {/* Error Message */}

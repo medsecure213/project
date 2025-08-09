@@ -8,10 +8,12 @@ import { SystemStatus } from './SystemStatus';
 import { AlertPanel } from './AlertPanel';
 import { ThreatDetectionPanel } from './ThreatDetectionPanel';
 import { SystemAlertPanel } from './SystemAlertPanel';
+import { UserManagement } from './UserManagement';
 import { useIncidentData } from '../hooks/useIncidentData';
+import { User } from '../types/user';
 
 interface DashboardProps {
-  user?: { username: string } | null;
+  user?: User | null;
   onLogout?: () => void;
 }
 
@@ -102,6 +104,8 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
         return 'Recent Incidents';
       case 'detection':
         return 'Threat Detection & Anomalies';
+      case 'user-management':
+        return 'User Management';
       default:
         return 'Dashboard Overview';
     }
@@ -267,6 +271,8 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
         return <ThreatDetectionPanel threatDetections={safeThreatDetections} anomalies={safeAnomalies} />;
       case 'email-alerts':
         return <SystemAlertPanel />;
+      case 'user-management':
+        return user ? <UserManagement currentUser={user} /> : null;
       default:
         return (
           <>
@@ -365,7 +371,7 @@ export function Dashboard({ user, onLogout }: DashboardProps) {
               <div>
                 <h1 className="text-2xl font-bold text-white">{getSectionTitle()}</h1>
                 <p className="text-sm text-gray-400">
-                  Security Operations Center{user ? ` • Welcome, ${user.username}` : ''}
+                  Security Operations Center{user ? ` • Welcome, ${user.firstName} ${user.lastName}` : ''}
                 </p>
               </div>
             </div>
