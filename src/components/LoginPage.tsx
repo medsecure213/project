@@ -75,7 +75,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             </p>
             <div className="mt-4 text-xs text-gray-500">
               <p>Demo credentials:</p>
-              <p>admin/password • manager/password • analyst/password</p>
+              <p>Create users via User Management or use demo: admin/password</p>
             </div>
           </div>
 
