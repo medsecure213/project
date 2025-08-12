@@ -1,116 +1,26 @@
-import { User, UserRole, Permission, LoginCredentials, CreateUserData } from '../types/user';
-
-// Mock data for demonstration
-const mockPermissions: Permission[] = [
-  { id: 'p1', name: 'View Dashboard', description: 'Access to main dashboard', resource: 'dashboard', action: 'read' },
-  { id: 'p2', name: 'Manage Incidents', description: 'Create and update incidents', resource: 'incidents', action: 'write' },
-  { id: 'p3', name: 'View Reports', description: 'Access to security reports', resource: 'reports', action: 'read' },
-  { id: 'p4', name: 'Manage Users', description: 'Create and manage user accounts', resource: 'users', action: 'write' },
-  { id: 'p5', name: 'System Configuration', description: 'Configure system settings', resource: 'system', action: 'write' },
-  { id: 'p6', name: 'Block IPs', description: 'Block and unblock IP addresses', resource: 'network', action: 'execute' },
-  { id: 'p7', name: 'View Alerts', description: 'View security alerts', resource: 'alerts', action: 'read' },
-  { id: 'p8', name: 'Acknowledge Alerts', description: 'Acknowledge and resolve alerts', resource: 'alerts', action: 'write' }
-];
-
-const mockRoles: UserRole[] = [
-  {
-    id: 'r1',
-    name: 'Security Administrator',
-    description: 'Full system access and user management',
-    level: 1,
-    permissions: mockPermissions
-  },
-  {
-    id: 'r2',
-    name: 'Security Manager',
-    description: 'Manage incidents and view reports',
-    level: 2,
-    permissions: mockPermissions.filter(p => !['p4', 'p5'].includes(p.id))
-  },
-  {
-    id: 'r3',
-    name: 'Security Analyst',
-    description: 'Analyze threats and manage alerts',
-    level: 3,
-    permissions: mockPermissions.filter(p => ['p1', 'p2', 'p3', 'p6', 'p7', 'p8'].includes(p.id))
-  },
-  {
-    id: 'r4',
-    name: 'Security Viewer',
-    description: 'Read-only access to security data',
-    level: 4,
-    permissions: mockPermissions.filter(p => ['p1', 'p3', 'p7'].includes(p.id))
-  }
-];
-
-const mockUsers: User[] = [
-  {
-    id: 'u1',
-    username: 'admin',
-    email: 'admin@company.com',
-    firstName: 'System',
-    lastName: 'Administrator',
-    role: mockRoles[0],
-    department: 'IT Security',
-    isActive: true,
-    createdAt: new Date('2024-01-01'),
-    createdBy: 'system',
-    permissions: mockRoles[0].permissions
-  },
-  {
-    id: 'u2',
-    username: 'manager',
-    email: 'manager@company.com',
-    firstName: 'Security',
-    lastName: 'Manager',
-    role: mockRoles[1],
-    department: 'IT Security',
-    isActive: true,
-    createdAt: new Date('2024-01-15'),
-    createdBy: 'u1',
-    permissions: mockRoles[1].permissions
-  },
-  {
-    id: 'u3',
-    username: 'analyst',
-    email: 'analyst@company.com',
-    firstName: 'Security',
-    lastName: 'Analyst',
-    role: mockRoles[2],
-    department: 'SOC',
-    isActive: true,
-    createdAt: new Date('2024-02-01'),
-    createdBy: 'u1',
-    permissions: mockRoles[2].permissions
-  }
-];
+import { supabase } from '../lib/supabaseClient';
+import { User, UserRole, LoginCredentials, CreateUserData } from '../types/user';
 
 class AuthService {
-  private users: User[] = [...mockUsers];
   private currentUser: User | null = null;
 
   async login(credentials: LoginCredentials): Promise<User> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // This assumes you have a 'users' table with a password column
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', credentials.username)
+      .eq('isActive', true)
+      .single();
 
-    const user = this.users.find(u => 
-      u.username === credentials.username && 
-      u.isActive
-    );
-
-    if (!user) {
+    if (error || !data) {
       throw new Error('Invalid username or password');
     }
 
-    // In a real app, you would verify the password hash
-    // For demo, accept any password for existing users
-    user.lastLogin = new Date();
-    this.currentUser = user;
-    
-    // Store in localStorage for persistence
-    localStorage.setItem('currentUser', JSON.stringify(user));
-    
-    return user;
+    // TODO: verify password hash if stored securely
+    this.currentUser = data as User;
+    localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+    return this.currentUser;
   }
 
   async logout(): Promise<void> {
@@ -119,11 +29,8 @@ class AuthService {
   }
 
   getCurrentUser(): User | null {
-    if (this.currentUser) {
-      return this.currentUser;
-    }
+    if (this.currentUser) return this.currentUser;
 
-    // Try to restore from localStorage
     const stored = localStorage.getItem('currentUser');
     if (stored) {
       try {
@@ -133,82 +40,81 @@ class AuthService {
         localStorage.removeItem('currentUser');
       }
     }
-
     return null;
   }
 
   async createUser(userData: CreateUserData, createdBy: string): Promise<User> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Duplicate check
+    const { data: existing, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .or(`username.eq.${userData.username},email.eq.${userData.email}`);
 
-    // Check if username already exists
-    if (this.users.some(u => u.username === userData.username)) {
-      throw new Error('Username already exists');
+    if (fetchError) throw fetchError;
+    if (existing && existing.length > 0) {
+      throw new Error('Username or email already exists');
     }
 
-    // Check if email already exists
-    if (this.users.some(u => u.email === userData.email)) {
-      throw new Error('Email already exists');
-    }
+    const { data, error } = await supabase
+      .from('users')
+      .insert([
+        {
+          username: userData.username,
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          department: userData.department,
+          roleId: userData.roleId,
+          createdBy,
+          isActive: true
+        }
+      ])
+      .select()
+      .single();
 
-    const role = mockRoles.find(r => r.id === userData.roleId);
-    if (!role) {
-      throw new Error('Invalid role selected');
-    }
-
-    const newUser: User = {
-      id: `u${Date.now()}`,
-      username: userData.username,
-      email: userData.email,
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      role,
-      department: userData.department,
-      isActive: true,
-      createdAt: new Date(),
-      createdBy,
-      permissions: role.permissions
-    };
-
-    this.users.push(newUser);
-    return newUser;
+    if (error) throw error;
+    return data as User;
   }
 
   async updateUser(userId: string, updates: Partial<User>): Promise<User> {
-    const userIndex = this.users.findIndex(u => u.id === userId);
-    if (userIndex === -1) {
-      throw new Error('User not found');
-    }
+    const { data, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single();
 
-    // If role is being updated, update permissions too
-    if (updates.role) {
-      updates.permissions = updates.role.permissions;
-    }
-
-    this.users[userIndex] = { ...this.users[userIndex], ...updates };
-    return this.users[userIndex];
+    if (error) throw error;
+    return data as User;
   }
 
   async deleteUser(userId: string): Promise<void> {
-    const userIndex = this.users.findIndex(u => u.id === userId);
-    if (userIndex === -1) {
-      throw new Error('User not found');
-    }
+    const { error } = await supabase
+      .from('users')
+      .update({ isActive: false })
+      .eq('id', userId);
 
-    // Don't actually delete, just deactivate
-    this.users[userIndex].isActive = false;
+    if (error) throw error;
   }
 
-  getAllUsers(): User[] {
-    return this.users.filter(u => u.isActive);
+  async getAllUsers(): Promise<User[]> {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('isActive', true);
+
+    if (error) throw error;
+    return data as User[];
   }
 
-  getAllRoles(): UserRole[] {
-    return mockRoles;
+  async getAllRoles(): Promise<UserRole[]> {
+    const { data, error } = await supabase.from('roles').select('*');
+    if (error) throw error;
+    return data as UserRole[];
   }
 
   hasPermission(user: User, resource: string, action: string): boolean {
-    return user.permissions.some(p => p.resource === resource && p.action === action);
+    return user.permissions?.some(p => p.resource === resource && p.action === action) ?? false;
   }
 
   canManageUsers(user: User): boolean {
