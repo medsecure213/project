@@ -20,7 +20,7 @@ class AuthService {
         last_login,
         created_at,
         updated_at,
-        created_by
+        createdBy
       `)
       .eq('username', credentials.username)
       .eq('is_active', true)
