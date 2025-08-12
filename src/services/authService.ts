@@ -64,7 +64,7 @@ class AuthService {
       isActive: dbUser.is_active,
       lastLogin: dbUser.last_login ? new Date(dbUser.last_login) : undefined,
       createdAt: new Date(dbUser.created_at),
-      createdBy: dbUser.created_by || '',
+      createdBy: dbUser.createdBy || '',
       permissions: this.getRolePermissions(dbUser.role)
     };
   }
