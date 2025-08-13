@@ -31,12 +31,26 @@ export function UserManagement({ currentUser }: UserManagementProps) {
     loadRoles();
   }, []);
 
-  const loadUsers = () => {
-    setUsers(authService.getAllUsers());
+  const loadUsers = async () => {
+    try {
+      const fetchedUsers = await authService.getAllUsers();
+      setUsers(fetchedUsers);
+    } catch (error) {
+      console.error('Failed to load users:', error);
+      setUsers([]);
+      setError('Failed to load users');
+    }
   };
 
-  const loadRoles = () => {
-    setRoles(authService.getAllRoles());
+  const loadRoles = async () => {
+    try {
+      const fetchedRoles = await authService.getAllRoles();
+      setRoles(fetchedRoles);
+    } catch (error) {
+      console.error('Failed to load roles:', error);
+      setRoles([]);
+      setError('Failed to load roles');
+    }
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
