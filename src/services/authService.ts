@@ -264,7 +264,7 @@ class AuthService {
         last_login,
         created_at,
         updated_at,
-        created_by
+        createdby
       `)
       .eq('is_active', true)
       .order('created_at', { ascending: false });
