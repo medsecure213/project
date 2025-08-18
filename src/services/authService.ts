@@ -251,26 +251,64 @@ class AuthService {
   }
 
   async getAllUsers(): Promise<User[]> {
-    const { data, error } = await supabase
-      .from('users')
-      .select(`
-        id,
-        username,
-        email,
-        full_name,
-        role,
-        role_level,
-        is_active,
-        last_login,
-        created_at,
-        updated_at,
-        createdby
-      `)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select(`
+          id,
+          username,
+          email,
+          full_name,
+          role,
+          role_level,
+          is_active,
+          last_login,
+          created_at,
+          updated_at,
+          createdby
+        `)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data.map(user => this.transformDbUserToAppUser(user));
+      if (error) {
+        console.error('Database error:', error);
+        return [];
+      }
+
+      if (!data) return [];
+
+      // Filter out users with invalid UUID data and transform valid ones
+      return data
+        .filter(user => this.isValidUserData(user))
+        .map(user => this.transformDbUserToAppUser(user));
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      return [];
+    }
+  }
+
+  private isValidUserData(user: any): boolean {
+    // Check if required fields exist and have valid values
+    if (!user.id || !user.username || !user.email) {
+      return false;
+    }
+
+    // Check if UUID fields have valid format (basic validation)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    
+    // Validate ID field (should be UUID)
+    if (!uuidRegex.test(user.id)) {
+      console.warn(`Invalid UUID for user ID: ${user.id}`);
+      return false;
+    }
+
+    // Validate createdby field if it exists and is not null
+    if (user.createdby && user.createdby !== null && !uuidRegex.test(user.createdby)) {
+      console.warn(`Invalid UUID for createdby: ${user.createdby}`);
+      return false;
+    }
+
+    return true;
   }
 
   async getAllRoles(): Promise<UserRole[]> {
